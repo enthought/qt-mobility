@@ -54,7 +54,7 @@ DirectShowVideoRendererControl::DirectShowVideoRendererControl(DirectShowEventLo
 DirectShowVideoRendererControl::~DirectShowVideoRendererControl()
 {
     if (m_filter)
-        m_filter->Release(); 
+        m_filter->Release();
 }
 
 QAbstractVideoSurface *DirectShowVideoRendererControl::surface() const

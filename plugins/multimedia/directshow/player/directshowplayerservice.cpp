@@ -211,7 +211,6 @@ void DirectShowPlayerService::releaseControl(QMediaControl *control)
 
 void DirectShowPlayerService::load(const QMediaContent &media, QIODevice *stream)
 {
-    printf("** DirectShowPlayerService::load\n");
     QMutexLocker locker(&m_mutex);
 
     m_pendingTasks = 0;
@@ -273,12 +272,10 @@ void DirectShowPlayerService::doSetUrlSource(QMutexLocker *locker)
 
     HRESULT hr = E_FAIL;
 
-    printf("** DirectShowPlayerService::doSetUrlSource\n");
-
     if (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https")) {
         static const GUID clsid_WMAsfReader = {
             0x187463a0, 0x5bb7, 0x11d3, {0xac, 0xbe, 0x00, 0x80, 0xc7, 0x5e, 0x24, 0x6e} };
-// RPD: why do this if it's just going to fail and use AddSourceFilter below??
+
         // {56a868a6-0ad4-11ce-b03a-0020af0ba770}
         static const GUID iid_IFileSourceFilter = {
             0x56a868a6, 0x0ad4, 0x11ce, {0xb0, 0x3a, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70} };
@@ -350,7 +347,6 @@ void DirectShowPlayerService::doSetUrlSource(QMutexLocker *locker)
         default:
             m_error = QMediaPlayer::ResourceError;
             m_errorString = QString();
-            printf("** Error code: %x\n", uint(hr));
             qWarning("DirectShowPlayerService::doSetUrlSource: Unresolved error code %x", uint(hr));
             break;
         }
