@@ -211,6 +211,7 @@ void DirectShowPlayerService::releaseControl(QMediaControl *control)
 
 void DirectShowPlayerService::load(const QMediaContent &media, QIODevice *stream)
 {
+    printf("** DirectShowPlayerService::load\n");
     QMutexLocker locker(&m_mutex);
 
     m_pendingTasks = 0;
@@ -272,10 +273,12 @@ void DirectShowPlayerService::doSetUrlSource(QMutexLocker *locker)
 
     HRESULT hr = E_FAIL;
 
+    printf("** DirectShowPlayerService::doSetUrlSource\n");
+
     if (url.scheme() == QLatin1String("http") || url.scheme() == QLatin1String("https")) {
         static const GUID clsid_WMAsfReader = {
             0x187463a0, 0x5bb7, 0x11d3, {0xac, 0xbe, 0x00, 0x80, 0xc7, 0x5e, 0x24, 0x6e} };
-
+// RPD: why do this if it's just going to fail and use AddSourceFilter below??
         // {56a868a6-0ad4-11ce-b03a-0020af0ba770}
         static const GUID iid_IFileSourceFilter = {
             0x56a868a6, 0x0ad4, 0x11ce, {0xb0, 0x3a, 0x00, 0x20, 0xaf, 0x0b, 0xa7, 0x70} };
@@ -347,6 +350,7 @@ void DirectShowPlayerService::doSetUrlSource(QMutexLocker *locker)
         default:
             m_error = QMediaPlayer::ResourceError;
             m_errorString = QString();
+            printf("** Error code: %x\n", uint(hr));
             qWarning("DirectShowPlayerService::doSetUrlSource: Unresolved error code %x", uint(hr));
             break;
         }
@@ -388,6 +392,7 @@ void DirectShowPlayerService::doSetStreamSource(QMutexLocker *locker)
 
 void DirectShowPlayerService::doRender(QMutexLocker *locker)
 {
+	HRESULT hr = S_OK;
     m_pendingTasks |= m_executedTasks & (Play | Pause);
 
     if (IMediaControl *control = com_cast<IMediaControl>(m_graph, IID_IMediaControl)) {
@@ -396,13 +401,13 @@ void DirectShowPlayerService::doRender(QMutexLocker *locker)
     }
 
     if (m_pendingTasks & SetAudioOutput) {
-        m_graph->AddFilter(m_audioOutput, L"AudioOutput");
+        hr = m_graph->AddFilter(m_audioOutput, L"AudioOutput");
 
         m_pendingTasks ^= SetAudioOutput;
         m_executedTasks |= SetAudioOutput;
     }
     if (m_pendingTasks & SetVideoOutput) {
-        m_graph->AddFilter(m_videoOutput, L"VideoOutput");
+        hr = m_graph->AddFilter(m_videoOutput, L"VideoOutput");
 
         m_pendingTasks ^= SetVideoOutput;
         m_executedTasks |= SetVideoOutput;
@@ -441,7 +446,9 @@ void DirectShowPlayerService::doRender(QMutexLocker *locker)
                         locker->unlock();
                         HRESULT hr;
                         if (SUCCEEDED(hr = graph->RenderEx(
-                                pin, /*AM_RENDEREX_RENDERTOEXISTINGRENDERERS*/ 1, 0))) {
+                                pin, 
+								/*AM_RENDEREX_RENDERTOEXISTINGRENDERERS*/ 1, 
+								0))) {
                             rendered = true;
                         } else if (renderHr == S_OK || renderHr == VFW_E_NO_DECOMPRESSOR){
                             renderHr = hr;
@@ -570,6 +577,8 @@ void DirectShowPlayerService::releaseGraph()
 void DirectShowPlayerService::doReleaseGraph(QMutexLocker *locker)
 {
     Q_UNUSED(locker);
+    HRESULT hr;
+	ULONG ref; 
 
     if (IMediaControl *control = com_cast<IMediaControl>(m_graph, IID_IMediaControl)) {
         control->Stop();
@@ -577,13 +586,13 @@ void DirectShowPlayerService::doReleaseGraph(QMutexLocker *locker)
     }
 
     if (m_source) {
-        m_source->Release();
+        ref = m_source->Release();
         m_source = 0;
     }
 
     m_eventHandle = 0;
 
-    m_graph->Release();
+    ref = m_graph->Release();
     m_graph = 0;
 
     m_loop->wake();

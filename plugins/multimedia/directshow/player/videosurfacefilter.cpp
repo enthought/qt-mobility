@@ -71,13 +71,15 @@ VideoSurfaceFilter::VideoSurfaceFilter(
     , m_pinId(QString::fromLatin1("reference"))
     , m_sampleScheduler(static_cast<IPin *>(this))
 {
+    //printf("** VideoSurfaceFilter: ctor, m_ref is %d\n", m_ref);
     connect(surface, SIGNAL(supportedFormatsChanged()), this, SLOT(supportedFormatsChanged()));
     connect(&m_sampleScheduler, SIGNAL(sampleReady()), this, SLOT(sampleReady()));
 }
 
 VideoSurfaceFilter::~VideoSurfaceFilter()
 {
-    Q_ASSERT(m_ref == 1);
+    Q_ASSERT(m_ref == 0);
+    //printf("** VideoSurfaceFilter: dtor, m_ref is %d\n", m_ref);
 }
 
 HRESULT VideoSurfaceFilter::QueryInterface(REFIID riid, void **ppvObject)
@@ -112,16 +114,21 @@ HRESULT VideoSurfaceFilter::QueryInterface(REFIID riid, void **ppvObject)
 
 ULONG VideoSurfaceFilter::AddRef()
 {
+	printf("** VideoSurfaceFilter: AddRef,  m_ref %d --> %d\n", m_ref, m_ref+1);
     return InterlockedIncrement(&m_ref);
 }
 
 ULONG VideoSurfaceFilter::Release()
 {
+	printf("** VideoSurfaceFilter: Release, m_ref %d --> %d\n", m_ref, m_ref-1);
     ULONG ref = InterlockedDecrement(&m_ref);
 
-    Q_ASSERT(ref != 0);
+    if (ref == 0) {
+        delete this;
+    }
 
     return ref;
+
 }
 
 HRESULT VideoSurfaceFilter::GetClassID(CLSID *pClassID)
