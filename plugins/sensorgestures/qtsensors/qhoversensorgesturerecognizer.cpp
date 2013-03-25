@@ -118,7 +118,7 @@ void QHoverSensorGestureRecognizer::orientationReadingChanged(QOrientationReadin
 
 void QHoverSensorGestureRecognizer::irProximityReadingChanged(QProximityReading *reading)
 {
-#warning FIXME
+//#warning FIXME  MSVC 2008 does not recognize this directive
 //    reflectance = reading->reflectance();
 //    if (reflectance == 0)
 //        return;

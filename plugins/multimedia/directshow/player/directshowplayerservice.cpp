@@ -265,6 +265,10 @@ void DirectShowPlayerService::load(const QMediaContent &media, QIODevice *stream
 
 void DirectShowPlayerService::doSetUrlSource(QMutexLocker *locker)
 {
+    // This can happen in certain error situations.  Return now to avoid a crash.
+    if (!m_graph)
+        return;
+
     IBaseFilter *source = 0;
 
     QMediaResource resource = m_resources.takeFirst();
@@ -441,7 +445,9 @@ void DirectShowPlayerService::doRender(QMutexLocker *locker)
                         locker->unlock();
                         HRESULT hr;
                         if (SUCCEEDED(hr = graph->RenderEx(
-                                pin, /*AM_RENDEREX_RENDERTOEXISTINGRENDERERS*/ 1, 0))) {
+                                pin, 
+                                /*AM_RENDEREX_RENDERTOEXISTINGRENDERERS*/ 1, 
+                                0))) {
                             rendered = true;
                         } else if (renderHr == S_OK || renderHr == VFW_E_NO_DECOMPRESSOR){
                             renderHr = hr;
@@ -492,6 +498,11 @@ void DirectShowPlayerService::doRender(QMutexLocker *locker)
                 case VFW_E_UNSUPPORTED_STREAM:
                     m_error = QMediaPlayer::FormatError;
                     m_errorString = QString();
+                    break;
+                case VFW_E_CANNOT_RENDER:
+                    m_error = QMediaPlayer::ResourceError;
+                    m_errorString = QString("DirectShowPlayerService::doRender: No combination of filters could be found to render the media stream.");
+                    qWarning() << m_errorString;
                     break;
                 default:
                     m_error = QMediaPlayer::ResourceError;

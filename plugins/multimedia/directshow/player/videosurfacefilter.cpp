@@ -77,7 +77,7 @@ VideoSurfaceFilter::VideoSurfaceFilter(
 
 VideoSurfaceFilter::~VideoSurfaceFilter()
 {
-    Q_ASSERT(m_ref == 1);
+    Q_ASSERT(m_ref == 0);
 }
 
 HRESULT VideoSurfaceFilter::QueryInterface(REFIID riid, void **ppvObject)
@@ -119,7 +119,9 @@ ULONG VideoSurfaceFilter::Release()
 {
     ULONG ref = InterlockedDecrement(&m_ref);
 
-    Q_ASSERT(ref != 0);
+    if (ref == 0) {
+        delete this;
+    }
 
     return ref;
 }
